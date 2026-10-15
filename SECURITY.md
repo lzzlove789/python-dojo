@@ -15,8 +15,11 @@ Python 练功房是**纯静态网站**（部署在 GitHub Pages），没有后�
 先说清楚什么**不是**边界：
 
 - ❌ **Python 层的黑名单不是边界。** 本项目会拦截用户代码里的 `import js`，但这只是一个友好提示。
-  已验证的绕过方式至少有：通过拦截函数的 `__globals__` 取回原始 `__import__`；`pyodide.code.run_js(...)` 直接执行任意 JS；
-  `pyodide.ffi` 等。Python 足够灵活，这类黑名单不可能堵死。
+  已验证的绕过方式至少有：通过拦截函数的 `__globals__` 取回原始 `__import__`；`importlib.import_module("js")`；
+  `pyodide.ffi` 等。绕过之后用户代码就能拿到 JS 全局对象（`fetch`、`postMessage`、`indexedDB`……）。
+  Python 足够灵活，这类黑名单不可能堵死。
+- ℹ️ 顺带一提：`pyodide.code.run_js(...)`（把字符串当 JS 执行）在线上环境**用不了**——我们的 CSP 没有 `'unsafe-eval'`，浏览器会直接报
+  `EvalError`（已在浏览器里实测）。这是 CSP 里"不放 `unsafe-eval`"的又一个收益，所以 `csp.test.ts` 会锁住这一点。
 
 真正起作用的是：
 
@@ -71,11 +74,17 @@ GitHub Pages 上同一账号的所有项目页（`用户名.github.io/项目A`�
   下面的清单；这些只能在真实浏览器里验证，单元测试覆盖不到：
   1. **外联应被 CSP 拦截**：在练功场运行
      ```python
-     from pyodide.code import run_js
-     run_js("fetch('https://api.github.com/').then(r => console.log('LEAK', r.status)).catch(e => console.log('blocked', e))")
+     import importlib
+     js = importlib.import_module("js")   # 绕过 import js 的提示，拿到 JS 桥
+     try:
+         r = await js.fetch("https://api.github.com/")   # 这个地址允许跨域，所以只有 CSP 能拦住它
+         print("LEAK", r.status)
+     except Exception as e:
+         print("blocked:", e)
      ```
-     控制台应出现 `violates the following Content Security Policy directive: "connect-src 'self'"`，且不出现 `LEAK`。
-     再用 `new Worker(URL.createObjectURL(new Blob([...])))` 的嵌套 Worker 请求同一地址，结果应相同。
+     应输出 `blocked: ...`，控制台出现 `violates the following Content Security Policy directive: "connect-src 'self'"`，且不出现 `LEAK`。
+     再用 `js.Worker.new(js.URL.createObjectURL(js.Blob.new([...])))` 创建嵌套 Worker 去请求同一地址，结果应相同。
+     另外 `from pyodide.code import run_js; run_js("1")` 应抛 `EvalError`（CSP 禁止 `unsafe-eval`）。
   2. **内存压力**（请在独立浏览器窗口里做，别开着重要标签页）：`x = [0] * (2 * 10**8)`、`bytearray(10**9)`，
      要么 `MemoryError`，要么 Worker 崩溃后自动恢复，之后正常运行代码应当可用。
   3. **初始化失败可恢复**：在开发者工具里拦截 `pyodide.asm.wasm` 请求 → 应显示失败原因和「重试」，取消拦截后点「重试」可恢复。
