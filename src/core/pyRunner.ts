@@ -61,7 +61,20 @@ export class PyRunner implements Runner {
     this.spawn();
   }
 
-  async run(req: RunRequest): Promise<RunResult> {
+  private queue: Promise<unknown> = Promise.resolve();
+
+  /**
+   * 串行执行：做题页和练功场共用同一个 Worker，Worker 里的 stdout 收集器和命名空间是全局的，
+   * 两次运行重叠（例如用户代码里有 top-level await，或切页时上一次还没跑完）会互相串输出。
+   * 排队后每次运行的超时也是从它真正开始时才计时。
+   */
+  run(req: RunRequest): Promise<RunResult> {
+    const result = this.queue.then(() => this.runNow(req));
+    this.queue = result.catch(() => undefined);
+    return result;
+  }
+
+  private async runNow(req: RunRequest): Promise<RunResult> {
     const invalid = validateRequest(req);
     if (invalid) return failure(invalid);
 

@@ -1,10 +1,16 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
-import { useGlobalStore } from "./global";
+import { useGlobalStore, STORAGE_KEY } from "./global";
+import { MAX_CODE_CHARS } from "../core/limits";
 
 describe("useGlobalStore", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+  });
+
+  it("localStorage 的 key 带项目前缀，不与同一 github.io 下的其他项目冲突", () => {
+    expect(STORAGE_KEY).toMatch(/^python-dojo/);
+    expect(STORAGE_KEY).not.toBe("global");
   });
 
   it("初始状态：无通关记录、当前关为第一关", () => {
@@ -27,6 +33,15 @@ describe("useGlobalStore", () => {
     expect(store.drafts.level1).toBe("print(1)");
     store.clearDraft("level1");
     expect(store.drafts.level1).toBeUndefined();
+  });
+
+  it("saveDraft 拒绝超长代码和未知的键", () => {
+    const store = useGlobalStore();
+    store.saveDraft("level1", "a".repeat(MAX_CODE_CHARS + 1));
+    store.saveDraft("not-a-level", "x");
+    expect(store.drafts).toEqual({});
+    store.saveDraft("playground", "ok");
+    expect(store.drafts.playground).toBe("ok");
   });
 
   it("resetProgress 清空一切", () => {

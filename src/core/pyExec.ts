@@ -19,12 +19,71 @@ def _guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
 
 _b.__import__ = _guarded_import
 
+# 所有运行共用一个 Python 解释器，用户代码可能留下副作用（sys.stdout = None、
+# 覆盖 builtins、改 sys.path / 工作目录 / 递归上限、导入的模块……）。
+# 每次运行前后把这些恢复到初始快照，避免一次胡写把后面所有运行（和后面的关卡）带崩。
+# 注意：快照之前已加载的模块（json、os 等）的属性被改写不在恢复范围内。
+import sys as _sys
+import os as _os
+
+_snap_builtins = dict(_b.__dict__)
+_snap_modules = set(_sys.modules)
+_snap_streams = (_sys.stdout, _sys.stderr, _sys.stdin)
+_snap_path = list(_sys.path)
+_snap_reclimit = _sys.getrecursionlimit()
+_snap_cwd = _os.getcwd()
+
+def _reset():
+    _sys.stdout, _sys.stderr, _sys.stdin = _snap_streams
+    for k in list(_b.__dict__):
+        if k not in _snap_builtins:
+            del _b.__dict__[k]
+    for k, v in _snap_builtins.items():
+        if _b.__dict__.get(k) is not v:
+            _b.__dict__[k] = v
+    for m in list(_sys.modules):
+        if m not in _snap_modules:
+            del _sys.modules[m]
+    _sys.path[:] = _snap_path
+    _sys.setrecursionlimit(_snap_reclimit)
+    try:
+        _os.chdir(_snap_cwd)
+    except Exception:
+        pass
+
+from pyodide.code import eval_code_async as _eval_async
+
+# 用户代码里的 sys.exit() / raise SystemExit 在 Pyodide 的异步执行里会同时变成一个
+# “未处理的 Promise rejection”，所以在 Python 这一侧先接住，再转成普通的错误信息。
+async def _run_user(code, ns):
+    try:
+        await _eval_async(code, ns)
+    except SystemExit as e:
+        if e.code not in (None, 0):
+            raise RuntimeError("程序通过 sys.exit(" + repr(e.code) + ") 提前退出")
+
+def _flush():
+    for s in (_sys.stdout, _sys.stderr):
+        try:
+            s.flush()
+        except Exception:
+            pass
+
+def _err(e):
+    return _json.dumps({"ok": False, "error": type(e).__name__ + ": " + str(e)})
+
 def _probe(expr, ns):
     try:
         v = eval(expr, ns)
-        return _json.dumps({"ok": True, "value": v}, default=repr)
     except BaseException as e:
-        return _json.dumps({"ok": False, "error": type(e).__name__ + ": " + str(e)})
+        return _err(e)
+    try:
+        return _json.dumps({"ok": True, "value": v}, default=repr, allow_nan=False)
+    except ValueError:
+        # NaN / Infinity 不是合法 JSON，退而求其次用 repr 字符串
+        return _json.dumps({"ok": True, "value": repr(v)})
+    except BaseException as e:
+        return _err(e)
 `;
 
 export function setupHelpers(py: PyodideInterface) {
@@ -73,6 +132,8 @@ export async function execute(py: PyodideInterface, req: RunRequest): Promise<Ru
   const invalid = validateRequest(req);
   if (invalid) return emptyResult(invalid);
 
+  py.globals.get("_reset")();
+
   const out = makeCollector();
   const err = makeCollector();
   py.setStdout({ raw: (b: number) => out.push(b) });
@@ -84,23 +145,30 @@ export async function execute(py: PyodideInterface, req: RunRequest): Promise<Ru
   const ns = py.globals.get("dict")();
   ns.set("__dojo_user__", true);
   let error: string | null = null;
+  const runUser = py.globals.get("_run_user");
   try {
-    await py.runPythonAsync(req.code, { globals: ns });
+    await runUser(req.code, ns);
   } catch (e) {
     error = cleanTraceback(String((e as Error).message ?? e));
+  } finally {
+    runUser.destroy();
   }
 
   // end="" 之类没换行的输出还留在缓冲区里
-  py.runPython("import sys; sys.stdout.flush(); sys.stderr.flush()");
+  py.globals.get("_flush")();
 
   const probes: ProbeResult[] = [];
   const probe = py.globals.get("_probe");
   for (const expr of req.probes ?? []) {
-    const raw = probe(expr, ns) as string;
-    probes.push({ expr, ...JSON.parse(raw) });
+    try {
+      probes.push({ expr, ...JSON.parse(probe(expr, ns) as string) });
+    } catch (e) {
+      probes.push({ expr, ok: false, error: "检查表达式求值失败：" + String((e as Error).message ?? e) });
+    }
   }
   probe.destroy();
   ns.destroy();
+  py.globals.get("_reset")();
 
   return {
     stdout: out.text(),

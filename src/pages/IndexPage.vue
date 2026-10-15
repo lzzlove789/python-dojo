@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { useGlobalStore } from "../stores/global";
 import { getLevel, mainLevels } from "../levels";
@@ -48,6 +48,7 @@ import { checkRules, collectProbes, allPassed } from "../core/checker";
 import type { CheckResult } from "../core/checker";
 import type { RunResult } from "../core/types";
 import { getRunner } from "../core/pyRunner";
+import { createDraftSaver } from "../core/draftSaver";
 import type { RunnerStatus } from "../core/pyRunner";
 import CodeEditor from "../components/CodeEditor.vue";
 import OutputPanel from "../components/OutputPanel.vue";
@@ -83,8 +84,20 @@ function applyLevel(key: string) {
 
 watch(() => store.currentLevelKey, applyLevel, { immediate: true });
 
-// 代码草稿自动保存，刷新页面不丢
-watch(code, (v) => store.saveDraft(currentLevel.value.key, v));
+// 代码草稿自动保存（防抖），刷新页面不丢。和初始代码一样的内容不算草稿，直接清掉，
+// 这样以后关卡的初始代码更新了，没动过的用户也能看到新版本
+const drafts = createDraftSaver((key, value) => {
+  const lv = getLevel(key);
+  if (lv && value === lv.starter) store.clearDraft(key);
+  else store.saveDraft(key, value);
+});
+watch(code, (v) => drafts.queue(currentLevel.value.key, v));
+const flushDrafts = () => drafts.flush();
+window.addEventListener("pagehide", flushDrafts);
+onBeforeUnmount(() => {
+  flushDrafts();
+  window.removeEventListener("pagehide", flushDrafts);
+});
 
 async function onRun() {
   if (running.value) return;

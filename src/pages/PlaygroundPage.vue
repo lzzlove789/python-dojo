@@ -35,9 +35,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, onBeforeUnmount } from "vue";
 import { useGlobalStore } from "../stores/global";
 import { getRunner } from "../core/pyRunner";
+import { createDraftSaver } from "../core/draftSaver";
 import type { RunnerStatus } from "../core/pyRunner";
 import type { RunResult } from "../core/types";
 import CodeEditor from "../components/CodeEditor.vue";
@@ -55,7 +56,15 @@ const running = ref(false);
 const status = ref<RunnerStatus>(runner.status);
 runner.onStatus = (s) => (status.value = s);
 
-watch(code, (v) => store.saveDraft(DRAFT_KEY, v));
+// 防抖保存，离开页面时立即写入
+const drafts = createDraftSaver((key, value) => store.saveDraft(key, value));
+watch(code, (v) => drafts.queue(DRAFT_KEY, v));
+const flushDrafts = () => drafts.flush();
+window.addEventListener("pagehide", flushDrafts);
+onBeforeUnmount(() => {
+  flushDrafts();
+  window.removeEventListener("pagehide", flushDrafts);
+});
 
 async function onRun() {
   if (running.value) return;

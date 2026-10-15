@@ -37,3 +37,12 @@ Python 练功房是**纯静态网站**（部署在 GitHub Pages），没有后�
   实测：用 `importlib.import_module("js")` 取到 `js.fetch` 去请求一个允许跨域的地址（如 `https://api.github.com/`），控制台应出现
   `violates the following Content Security Policy directive: "connect-src 'self'"`。
 - 升级 `pyodide` 时，`package.json` 里保持精确版本号，并重新跑 `npm test`（会把 30 关的参考答案都真实执行一遍）。
+
+## 同一个 github.io 下的多个项目共享 origin
+
+GitHub Pages 上同一账号的所有项目页（`用户名.github.io/项目A`、`/项目B`）属于**同一个 origin**，浏览器会让它们共用 `localStorage`，
+并且互相可以读到。所以：
+
+- 本项目的存储 key 带了 `python-dojo:` 前缀，避免和其他项目（例如另一个同样用 Pinia 的项目）互相覆盖。
+- **不要在 `localStorage` 里存任何敏感信息**；同账号下任何一个项目出现 XSS，都能读到其他项目的存储。
+- 如果以后要做账号/登录/付费之类的功能，请先给本项目换一个独立域名（Pages 的自定义域名），获得独立的 origin。
