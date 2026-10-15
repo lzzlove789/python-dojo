@@ -43,7 +43,7 @@ jobs:
           test -s dist/pyodide/pyodide.asm.wasm
           test -s dist/pyodide/python_stdlib.zip
           if grep -rq "cdn.jsdelivr.net/pyodide" dist/index.html; then echo "index.html must not load Pyodide from a CDN"; exit 1; fi
-      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: dist
 
