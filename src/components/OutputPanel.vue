@@ -4,7 +4,10 @@
       <span>输出</span>
       <span v-if="running" class="output-state">运行中…</span>
       <span v-else-if="status === 'loading'" class="output-state">Python 环境加载中（首次约几秒）…</span>
-      <span v-else-if="status === 'failed'" class="output-state output-err">Python 环境加载失败，请检查网络；再点一次「运行」会重试</span>
+      <template v-else-if="status === 'failed'">
+        <span class="output-state output-err">{{ initError || "Python 环境加载失败" }}</span>
+        <button class="retry-btn" @click="emit('retry')">重试</button>
+      </template>
     </div>
     <pre class="output-body"><template v-if="result"><span class="out-text">{{ result.stdout }}</span><span v-if="result.stderr" class="out-err">{{ result.stderr }}</span><span v-if="result.truncated" class="out-dim">{{ "\n…（输出太长，已截断）\n" }}</span><span v-if="result.error" class="out-err">{{ result.error }}</span><span v-if="!result.stdout && !result.stderr && !result.error" class="out-dim">（没有输出）</span></template><span v-else class="out-dim">点击「运行」或按 Ctrl+Enter 执行代码</span></pre>
   </div>
@@ -14,7 +17,13 @@
 import type { RunResult } from "../core/types";
 import type { RunnerStatus } from "../core/pyRunner";
 
-defineProps<{ result: RunResult | null; running: boolean; status: RunnerStatus }>();
+defineProps<{
+  result: RunResult | null;
+  running: boolean;
+  status: RunnerStatus;
+  initError?: string | null;
+}>();
+const emit = defineEmits<{ (e: "retry"): void }>();
 </script>
 
 <style scoped>
@@ -37,6 +46,19 @@ defineProps<{ result: RunResult | null; running: boolean; status: RunnerStatus }
 }
 .output-state {
   color: var(--yellow);
+}
+.retry-btn {
+  padding: 1px 10px;
+  background: transparent;
+  border: 1px solid var(--red);
+  border-radius: 4px;
+  color: var(--red);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+.retry-btn:hover {
+  background: rgba(251, 73, 52, 0.15);
 }
 .output-err,
 .out-err {

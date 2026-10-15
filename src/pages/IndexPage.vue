@@ -7,6 +7,7 @@
       <div class="toolbar">
         <span class="toolbar-title">{{ currentLevel.chapterTitle }} · {{ currentLevel.title }}</span>
         <span class="toolbar-spacer"></span>
+        <button class="ghost-btn" :disabled="status === 'loading'" title="重新启动 Python 解释器，清除上一次运行留下的所有状态" @click="onRestart">重置环境</button>
         <button class="run-btn" :disabled="running" @click="onRun">
           ▶ 运行 <span class="run-key">Ctrl+Enter</span>
         </button>
@@ -15,7 +16,7 @@
         <CodeEditor v-model="code" @run="onRun" />
       </div>
       <div class="output-wrap">
-        <OutputPanel :result="result" :running="running" :status="status" />
+        <OutputPanel :result="result" :running="running" :status="status" :init-error="initError" @retry="onRestart" />
       </div>
     </div>
     <div class="panel-right">
@@ -47,7 +48,7 @@ import { getLevel, mainLevels } from "../levels";
 import { checkRules, collectProbes, allPassed } from "../core/checker";
 import type { CheckResult } from "../core/checker";
 import type { RunResult } from "../core/types";
-import { getRunner } from "../core/pyRunner";
+import { getRunner } from "../core/runnerInstance";
 import { createDraftSaver } from "../core/draftSaver";
 import type { RunnerStatus } from "../core/pyRunner";
 import CodeEditor from "../components/CodeEditor.vue";
@@ -68,7 +69,15 @@ const checkResults = ref<CheckResult[]>([]);
 const running = ref(false);
 const showCelebration = ref(false);
 const status = ref<RunnerStatus>(runner.status);
-runner.onStatus = (s) => (status.value = s);
+const initError = ref<string | null>(runner.lastError);
+runner.onStatus = (s) => {
+  status.value = s;
+  initError.value = runner.lastError;
+};
+
+function onRestart() {
+  runner.restart();
+}
 
 let alreadyPassed = false;
 
@@ -204,6 +213,27 @@ function onGoLevels() {
 
 .toolbar-spacer {
   flex: 1;
+}
+
+.ghost-btn {
+  padding: 5px 12px;
+  background: transparent;
+  border: 1px solid var(--bg-light);
+  border-radius: 4px;
+  color: var(--fg-dim);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ghost-btn:hover:not(:disabled) {
+  color: var(--fg);
+  border-color: var(--fg-dim);
+}
+
+.ghost-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .run-btn {

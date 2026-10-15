@@ -12,6 +12,10 @@ const ready = loadPyodide({ indexURL: INDEX_URL }).then((py) => {
   return py;
 });
 
+// 初始化失败（网络断了、资源 404、wasm 编译失败……）在 Worker 里只是个未处理的 Promise rejection，
+// 不会触发主线程的 error 事件，页面就会永远停在“加载中”。必须主动告诉主线程。
+ready.catch((e) => postMessage({ type: "init-error", message: String((e as Error)?.message ?? e) }));
+
 self.onmessage = async (ev: MessageEvent<{ id: number; req: RunRequest }>) => {
   const { id, req } = ev.data;
   try {
