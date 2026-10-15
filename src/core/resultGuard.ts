@@ -31,6 +31,7 @@ export function parseResult(raw: unknown): RunResult | null {
   if (typeof o.timedOut !== "boolean") return null;
   if (!Array.isArray(o.probes) || o.probes.length > MAX_PROBES) return null;
   if (o.truncated !== undefined && typeof o.truncated !== "boolean") return null;
+  if (o.engineFailed !== undefined && typeof o.engineFailed !== "boolean") return null;
 
   const probes: ProbeResult[] = [];
   for (const p of o.probes) {
@@ -47,5 +48,6 @@ export function parseResult(raw: unknown): RunResult | null {
     probes,
   };
   if (o.truncated !== undefined) result.truncated = o.truncated;
+  if (o.engineFailed !== undefined) result.engineFailed = o.engineFailed;
   return result;
 }

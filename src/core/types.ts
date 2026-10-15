@@ -23,6 +23,8 @@ export interface RunResult {
   probes: ProbeResult[];
   /** 输出超过上限被截断 */
   truncated?: boolean;
+  /** 引擎自身出错（不是用户代码的错）：主线程应该重建 Worker */
+  engineFailed?: boolean;
 }
 
 export interface Runner {

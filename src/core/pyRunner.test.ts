@@ -256,6 +256,17 @@ describe("PyRunner", () => {
       }
     });
 
+    it("引擎报告自身出错（engineFailed，如复位抛异常）：返回错误并重建 Worker", async () => {
+      const { runner, workers } = await readyRunner();
+      const p = runner.run({ code: "pass" });
+      await flush();
+      workers[0].reply(workers[0].posted[0].id, { ...okResult(), error: "运行引擎内部出错：boom", engineFailed: true });
+      const r = await p;
+      expect(r.error).toContain("运行引擎内部出错");
+      expect(workers[0].terminated).toBe(true);
+      expect(workers).toHaveLength(2);
+    });
+
     it("合法结果只保留已知字段，多余字段被丢弃", async () => {
       const { runner, workers } = await readyRunner();
       const p = runner.run({ code: "pass" });

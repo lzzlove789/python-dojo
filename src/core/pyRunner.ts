@@ -158,7 +158,8 @@ export class PyRunner implements Runner {
       const onMsg = (ev: MessageEvent) => {
         if (ev.data?.type !== "result" || ev.data.id !== id) return;
         const parsed = parseResult(ev.data.result);
-        finish(parsed ?? failure("运行引擎返回了无法识别的结果，已自动重置"), parsed === null);
+        // 结果无法识别，或引擎自己报告出错（如 _reset 抛异常、解释器状态已不可信）：都重建 Worker
+        finish(parsed ?? failure("运行引擎返回了无法识别的结果，已自动重置"), parsed === null || parsed.engineFailed === true);
       };
       const onCrash = () =>
         finish(failure("运行环境崩溃了（可能是内存不足），已自动重置，请检查代码后重试"), true);

@@ -22,9 +22,70 @@ _b.__import__ = _guarded_import
 # 所有运行共用一个 Python 解释器，用户代码可能留下副作用（sys.stdout = None、
 # 覆盖 builtins、改 sys.path / 工作目录 / 递归上限、导入的模块……）。
 # 每次运行前后把这些恢复到初始快照，避免一次胡写把后面所有运行（和后面的关卡）带崩。
-# 注意：快照之前已加载的模块（json、os 等）的属性被改写不在恢复范围内。
+# 常用标准库模块（json、math、re、os、collections……）及其中的 Python 类，也做“属性级”快照与恢复，
+# 否则用户写一句 json.dumps = ... 就会污染之后所有运行（包括之后的关卡）。
+# 不在范围内的：C 实现的内置类型（本来就改不了）、不在下面名单里的模块；这种情况用「重置环境」按钮。
 import sys as _sys
 import os as _os
+import importlib as _importlib
+
+# 助手函数只用这些私有引用，不去查模块属性，这样即使用户改了 json.dumps / builtins.repr，
+# 也搞不坏、也伪造不了检查表达式的求值
+_dumps = _json.dumps
+_eval = eval
+_repr = repr
+_type = type
+_str = str
+_isinstance = isinstance
+_vars = vars
+_setattr = setattr
+_delattr = delattr
+_list = list
+_dict = dict
+_MISSING = object()
+_PROTECTED_MODULES = [
+    "json", "math", "re", "os", "os.path", "random", "collections", "datetime", "itertools",
+    "functools", "string", "time", "csv", "io", "statistics", "copy", "operator", "textwrap",
+    "heapq", "bisect",
+]
+
+def _snap_object(o):
+    try:
+        return (o, _dict(_vars(o)))
+    except Exception:
+        return None
+
+_protected = []
+_seen_ids = set()
+for _n in _PROTECTED_MODULES:
+    try:
+        _m = _importlib.import_module(_n)
+    except Exception:
+        continue
+    for _o in [_m] + [v for v in _list(_vars(_m).values()) if _isinstance(v, _type) and getattr(v, "__module__", None) == _m.__name__]:
+        if id(_o) in _seen_ids:
+            continue
+        _seen_ids.add(id(_o))
+        _s = _snap_object(_o)
+        if _s:
+            _protected.append(_s)
+
+def _restore_object(o, snap):
+    d = _vars(o)
+    for k in _list(d):
+        if k not in snap:
+            try:
+                _delattr(o, k)
+            except Exception:
+                pass
+    for k, v in snap.items():
+        if d.get(k, _MISSING) is not v:
+            try:
+                _setattr(o, k, v)
+            except Exception:
+                pass
+
+_snap_environ = _dict(_os.environ)
 
 _snap_builtins = dict(_b.__dict__)
 _snap_modules = set(_sys.modules)
@@ -50,6 +111,10 @@ def _reset():
         _os.chdir(_snap_cwd)
     except Exception:
         pass
+    for o, snap in _protected:
+        _restore_object(o, snap)
+    _os.environ.clear()
+    _os.environ.update(_snap_environ)
 
 from pyodide.code import eval_code_async as _eval_async
 
@@ -70,18 +135,18 @@ def _flush():
             pass
 
 def _err(e):
-    return _json.dumps({"ok": False, "error": type(e).__name__ + ": " + str(e)})
+    return _dumps({"ok": False, "error": _type(e).__name__ + ": " + _str(e)})
 
 def _probe(expr, ns):
     try:
-        v = eval(expr, ns)
+        v = _eval(expr, ns)
     except BaseException as e:
         return _err(e)
     try:
-        return _json.dumps({"ok": True, "value": v}, default=repr, allow_nan=False)
+        return _dumps({"ok": True, "value": v}, default=_repr, allow_nan=False)
     except ValueError:
         # NaN / Infinity 不是合法 JSON，退而求其次用 repr 字符串
-        return _json.dumps({"ok": True, "value": repr(v)})
+        return _dumps({"ok": True, "value": _repr(v)})
     except BaseException as e:
         return _err(e)
 `;

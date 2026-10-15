@@ -32,6 +32,7 @@ self.onmessage = async (ev: MessageEvent<{ id: number; req: RunRequest }>) => {
         error: "运行引擎内部出错：" + String((e as Error)?.message ?? e),
         timedOut: false,
         probes: [],
+        engineFailed: true,
       },
     });
   }
