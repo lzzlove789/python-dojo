@@ -30,8 +30,19 @@ jobs:
       - run: npm ci
       # 只检查会进入线上包的依赖；有 high 及以上漏洞则中止部署
       - run: npm audit --omit=dev --audit-level=high
+      # 含开发依赖的完整审计：只提示、不阻断（构建工具链的漏洞不会进入线上包，需要人工判断）
+      - run: npm audit --audit-level=high
+        continue-on-error: true
       - run: npm test
       - run: npm run build
+      # 构建产物必须带 CSP（由 vite 插件注入），并且 Pyodide 运行时必须自托管；任何一项丢了都不应该部署
+      - name: Verify build output
+        run: |
+          grep -q 'http-equiv="Content-Security-Policy"' dist/index.html
+          grep -q "connect-src 'self'" dist/index.html
+          test -s dist/pyodide/pyodide.asm.wasm
+          test -s dist/pyodide/python_stdlib.zip
+          if grep -rq "cdn.jsdelivr.net/pyodide" dist/index.html; then echo "index.html must not load Pyodide from a CDN"; exit 1; fi
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: dist
