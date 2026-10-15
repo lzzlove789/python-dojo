@@ -35,8 +35,8 @@ def active_names(text):
       equals: ["A", "C"],
       label: "active_names 只返回 active 的用户",
     },
-    { type: "codeMatches", pattern: "ensure_ascii\\s*=\\s*False", label: "用 ensure_ascii=False 保留中文" },
-    { type: "codeMatches", pattern: "sort_keys\\s*=\\s*True", label: "用 sort_keys=True 排序键" },
+    { type: "hasKeyword", keyword: "ensure_ascii", equals: false, label: "用 ensure_ascii=False 保留中文" },
+    { type: "hasKeyword", keyword: "sort_keys", equals: true, label: "用 sort_keys=True 排序键" },
   ],
   examples: [
     { code: 'import json\ns = json.dumps({"name": "Tom", "tags": ["a", "b"]})\nprint(s)\nprint(type(s))', description: "dumps：Python 对象 → JSON 字符串" },

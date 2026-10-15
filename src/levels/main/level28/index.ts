@@ -32,9 +32,9 @@ def circle_area(r):
     { type: "exprEquals", expr: 'days_between("2024-01-01", "2024-03-01")', equals: 60, label: "2024-01-01 到 2024-03-01 相差 60 天（含闰年）" },
     { type: "exprEquals", expr: 'days_between("2024-03-01", "2024-01-01")', equals: -60, label: "日期倒过来得到负数" },
     { type: "exprEquals", expr: "circle_area(2)", equals: 12.57, label: "circle_area(2) 返回 12.57" },
-    { type: "codeMatches", pattern: "Counter", label: "使用了 collections.Counter" },
-    { type: "codeMatches", pattern: "\\bimport\\s+math\\b|from\\s+math\\s+import", label: "导入了 math" },
-    { type: "codeMatches", pattern: "from\\s+datetime\\s+import|import\\s+datetime", label: "导入了 datetime" },
+    { type: "uses", calls: ["Counter"], label: "使用了 collections.Counter" },
+    { type: "uses", imports: ["math"], label: "导入了 math" },
+    { type: "uses", imports: ["datetime"], label: "导入了 datetime" },
   ],
   examples: [
     { code: "import math\nprint(math.sqrt(16), math.pi)\nprint(math.floor(3.7), math.ceil(3.2))", description: "import 模块，再用 模块名.功能" },

@@ -48,7 +48,8 @@ def read_lines(path):
       label: "write_lines 会覆盖旧内容",
     },
     { type: "exprEquals", expr: 'read_lines("/tmp/dojo_not_exist.txt")', equals: [], label: "文件不存在时返回空列表，不崩溃" },
-    { type: "codeMatches", pattern: "with\\s+open\\(", label: "用 with open(...) 管理文件" },
+    { type: "uses", calls: ["open"], label: "用 open() 打开文件" },
+    { type: "uses", nodes: ["With"], label: "用 with 语句管理文件" },
   ],
   examples: [
     { code: 'with open("/tmp/demo.txt", "w", encoding="utf-8") as f:\n    f.write("第一行\\n第二行\\n")\n\nwith open("/tmp/demo.txt", encoding="utf-8") as f:\n    print(f.read())', description: "写入再读取（浏览器里的文件在内存虚拟磁盘上，刷新页面就没了）" },

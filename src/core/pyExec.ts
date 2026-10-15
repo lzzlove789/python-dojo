@@ -1,6 +1,6 @@
 import type { PyodideInterface } from "pyodide";
 import { MAX_OUTPUT_BYTES, validateRequest } from "./limits";
-import type { ProbeResult, RunRequest, RunResult } from "./types";
+import type { AstInfo, ProbeResult, RunRequest, RunResult } from "./types";
 
 // _guarded_import：用户代码（命名空间带 __dojo_user__ 标记）不能 import js / pyodide_js，
 // 这两个模块是 Python 通向浏览器 JS 的桥。Pyodide 自己的内部 import 不受影响。
@@ -149,6 +149,97 @@ def _probe(expr, ns):
         return _dumps({"ok": True, "value": _repr(v)})
     except BaseException as e:
         return _err(e)
+
+# ---- 用 AST 分析用户代码（代替对源码文本做正则：注释/字符串里的关键字不会误判，也没有 ReDoS）----
+import ast as _ast_mod
+
+_parse = _ast_mod.parse
+_walk = _ast_mod.walk
+_A = {n: getattr(_ast_mod, n) for n in (
+    "Call", "Name", "Attribute", "Constant", "Starred", "If", "ExceptHandler", "Import", "ImportFrom",
+    "FunctionDef", "AsyncFunctionDef", "ClassDef", "Load",
+)}
+_MAX_ITEMS = 500
+
+def _callee(func):
+    """被调用者的名字：f() -> 'f'；x.f() -> 'f'；super().f() -> 'super().f'"""
+    if _isinstance(func, _A["Name"]):
+        return func.id
+    if _isinstance(func, _A["Attribute"]):
+        v = func.value
+        if _isinstance(v, _A["Call"]) and _isinstance(v.func, _A["Name"]) and v.func.id == "super":
+            return "super()." + func.attr
+        return func.attr
+    return None
+
+def _deco_name(d):
+    if _isinstance(d, _A["Call"]):
+        d = d.func
+    if _isinstance(d, _A["Name"]):
+        return d.id
+    if _isinstance(d, _A["Attribute"]):
+        return d.attr
+    return None
+
+def _ast_info(code):
+    try:
+        tree = _parse(code)
+    except BaseException:
+        return _dumps({"ok": False})
+    nodes = {}
+    calls = set()
+    imports = set()
+    names = set()
+    keywords = []
+    stars = []
+    decorated = []
+    functions = []
+    for n in _walk(tree):
+        t = _type(n).__name__
+        nodes[t] = nodes.get(t, 0) + 1
+        if _isinstance(n, _A["If"]) and _list(n.orelse) and len(n.orelse) == 1 and _isinstance(n.orelse[0], _A["If"]):
+            nodes["Elif"] = nodes.get("Elif", 0) + 1
+        elif _isinstance(n, _A["ExceptHandler"]) and n.type is None:
+            nodes["BareExcept"] = nodes.get("BareExcept", 0) + 1
+        elif _isinstance(n, _A["Call"]):
+            callee = _callee(n.func)
+            if callee:
+                calls.add(callee)
+                for a in n.args:
+                    if _isinstance(a, _A["Starred"]):
+                        stars.append({"callee": callee, "kind": "*"})
+                for kw in n.keywords:
+                    if kw.arg is None:
+                        stars.append({"callee": callee, "kind": "**"})
+                    else:
+                        isconst = _isinstance(kw.value, _A["Constant"])
+                        keywords.append({"call": callee, "arg": kw.arg, "const": isconst, "value": kw.value.value if isconst else None})
+        elif _isinstance(n, _A["Name"]) and _isinstance(n.ctx, _A["Load"]):
+            names.add(n.id)
+        elif _isinstance(n, _A["Import"]):
+            for a in n.names:
+                imports.add(a.name.split(".")[0])
+        elif _isinstance(n, _A["ImportFrom"]):
+            if n.level == 0 and n.module:
+                imports.add(n.module.split(".")[0])
+        if _isinstance(n, (_A["FunctionDef"], _A["AsyncFunctionDef"])):
+            functions.append({"name": n.name, "vararg": n.args.vararg is not None, "kwarg": n.args.kwarg is not None})
+        if _isinstance(n, (_A["FunctionDef"], _A["AsyncFunctionDef"], _A["ClassDef"])):
+            for d in n.decorator_list:
+                dn = _deco_name(d)
+                if dn:
+                    decorated.append({"func": n.name, "decorator": dn})
+    return _dumps({
+        "ok": True,
+        "nodes": nodes,
+        "calls": sorted(calls)[:_MAX_ITEMS],
+        "imports": sorted(imports)[:_MAX_ITEMS],
+        "names": sorted(names)[:_MAX_ITEMS],
+        "keywords": keywords[:_MAX_ITEMS],
+        "stars": stars[:_MAX_ITEMS],
+        "decorated": decorated[:_MAX_ITEMS],
+        "functions": functions[:_MAX_ITEMS],
+    }, default=_repr)
 `;
 
 export function setupHelpers(py: PyodideInterface) {
@@ -207,6 +298,9 @@ export async function execute(py: PyodideInterface, req: RunRequest): Promise<Ru
   let li = 0;
   py.setStdin({ stdin: () => (li < lines.length ? lines[li++] : undefined) });
 
+  // 先分析源码（在用户代码运行之前，这样不会被运行时的任何改动影响）
+  const astInfo = analyze(py, req.code);
+
   const ns = py.globals.get("dict")();
   ns.set("__dojo_user__", true);
   let error: string | null = null;
@@ -242,5 +336,17 @@ export async function execute(py: PyodideInterface, req: RunRequest): Promise<Ru
     timedOut: false,
     probes,
     truncated: out.truncated() || err.truncated(),
+    ast: astInfo,
   };
+}
+
+function analyze(py: PyodideInterface, code: string): AstInfo {
+  const fn = py.globals.get("_ast_info");
+  try {
+    return JSON.parse(fn(code) as string) as AstInfo;
+  } catch {
+    return { ok: false };
+  } finally {
+    fn.destroy();
+  }
 }

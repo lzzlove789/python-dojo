@@ -24,9 +24,9 @@ first_big = next(x for x in fib(100) if x > 1000)
     { type: "exprEquals", expr: "list(fib(0))", equals: [], label: "fib(0) 不产出任何值" },
     { type: "exprEquals", expr: "type(fib(3)).__name__", equals: "generator", label: "fib 返回的是生成器对象" },
     { type: "exprEquals", expr: "first_big", equals: 1597, label: "first_big 等于 1597" },
-    { type: "codeMatches", pattern: "\\byield\\b", label: "fib 里使用了 yield" },
-    { type: "codeMatches", pattern: "\\bnext\\(", label: "用 next() 取第一个满足条件的值" },
-    { type: "codeForbids", pattern: "\\.append\\(", label: "不把结果攒进列表，逐个 yield" },
+    { type: "uses", nodes: ["Yield", "YieldFrom"], label: "fib 里使用了 yield" },
+    { type: "uses", calls: ["next"], label: "用 next() 取第一个满足条件的值" },
+    { type: "forbids", calls: ["append"], label: "不把结果攒进列表，逐个 yield" },
   ],
   examples: [
     { code: "def count_up(n):\n    i = 0\n    while i < n:\n        yield i\n        i += 1\n\nfor x in count_up(3):\n    print(x)", description: "yield 产出一个值后暂停，下次接着往下执行" },

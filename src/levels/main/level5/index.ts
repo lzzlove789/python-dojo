@@ -16,7 +16,7 @@ const level: LevelType = {
     { type: "exprEquals", expr: "name", equals: "小明", label: "name 读到了名字 小明" },
     { type: "exprEquals", expr: "type(age).__name__ + str(age)", equals: "int17", label: "age 是整数 17（不是字符串）" },
     { type: "stdoutMatches", pattern: "小明明年18岁", label: "输出了 小明明年18岁", example: "小明明年18岁" },
-    { type: "codeMatches", pattern: "int\\(", label: "用 int() 做了类型转换" },
+    { type: "uses", calls: ["int"], label: "用 int() 做了类型转换" },
   ],
   examples: [
     { code: 'x = input("随便输入点什么：")\nprint(type(x))', description: "input() 得到的永远是 str（本关预置输入是 小明）" },

@@ -15,7 +15,7 @@ const level: LevelType = {
     { type: "exprEquals", expr: "last3", equals: [8, 9, 10], label: "last3 是 [8, 9, 10]" },
     { type: "exprEquals", expr: "evens", equals: [2, 4, 6, 8, 10], label: "evens 是 [2, 4, 6, 8, 10]" },
     { type: "exprEquals", expr: "rev", equals: [10, 9, 8, 7, 6, 5, 4, 3, 2, 1], label: "rev 是倒序列表" },
-    { type: "codeForbids", pattern: "\\bfor\\b|\\.reverse\\(|reversed\\(", label: "全部用切片完成，不写循环" },
+    { type: "forbids", nodes: ["For", "While", "ListComp"], calls: ["reversed", "reverse"], label: "全部用切片完成，不写循环" },
   ],
   examples: [
     { code: "s = [10, 20, 30, 40, 50]\nprint(s[1:3])\nprint(s[:2])\nprint(s[3:])", description: "起点包含、终点不包含；省略表示到头/到尾" },

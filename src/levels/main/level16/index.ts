@@ -30,8 +30,8 @@ print(top2)
     },
     { type: "exprEquals", expr: "top", equals: "the", label: "top 是出现最多的单词 the" },
     { type: "exprEquals", expr: "top2", equals: [["the", 3], ["and", 2]], label: "top2 是前两名 [(the, 3), (and, 2)]" },
-    { type: "codeMatches", pattern: "\\.split\\(", label: "用 split() 拆分单词" },
-    { type: "codeForbids", pattern: "Counter|\\.count\\(", label: "不借助 Counter / count()，自己用字典统计" },
+    { type: "uses", calls: ["split"], label: "用 split() 拆分单词" },
+    { type: "forbids", calls: ["Counter", "count"], label: "不借助 Counter / count()，自己用字典统计" },
   ],
   examples: [
     { code: 'print("a b  c".split())\nprint("a,b,c".split(","))', description: "split：不带参数按任意空白拆分" },

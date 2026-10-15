@@ -46,7 +46,7 @@ class Puppy(Dog):
     { type: "exprEquals", expr: 'Puppy("Bit", 1).describe()', equals: "Bit: 汪汪!", label: "Puppy 的 describe 用到了自己的 speak" },
     { type: "exprEquals", expr: '[Puppy("Bit", 3).name, Puppy("Bit", 3).age]', equals: ["Bit", 3], label: "Puppy 同时有 name 和 age" },
     { type: "exprEquals", expr: 'isinstance(Puppy("a", 1), Animal)', equals: true, label: "Puppy 也是 Animal（继承链）" },
-    { type: "codeMatches", pattern: "super\\(\\)\\.__init__\\(", label: "用 super().__init__ 初始化父类" },
+    { type: "uses", calls: ["super().__init__"], label: "用 super().__init__ 初始化父类" },
   ],
   examples: [
     { code: "class A:\n    def hi(self):\n        return 'A'\n\nclass B(A):\n    pass\n\nprint(B().hi())\nprint(issubclass(B, A))", description: "子类自动获得父类的方法" },

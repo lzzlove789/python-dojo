@@ -14,7 +14,7 @@ const level: LevelType = {
     { type: "exprEquals", expr: "years", equals: 8, label: "years 等于 8" },
     { type: "exprEquals", expr: "money >= 2000", equals: true, label: "最终 money 已超过 2000" },
     { type: "stdoutEquals", expected: "8", label: "输出了 8" },
-    { type: "codeMatches", pattern: "\\bwhile\\b", label: "用了 while 循环" },
+    { type: "uses", nodes: ["While"], label: "用了 while 循环" },
   ],
   examples: [
     { code: "n = 3\nwhile n > 0:\n    print(n)\n    n -= 1\nprint('发射！')", description: "倒计时：条件成立就一直循环" },

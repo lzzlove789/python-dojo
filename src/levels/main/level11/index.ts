@@ -14,8 +14,8 @@ const level: LevelType = {
     { type: "noError", label: "代码运行没有报错" },
     { type: "exprEquals", expr: "stock", equals: { 苹果: 8, 橙子: 8 }, label: "stock 最终是 {苹果: 8, 橙子: 8}" },
     { type: "exprEquals", expr: "grape", equals: 0, label: "grape 等于 0" },
-    { type: "codeMatches", pattern: "\\.get\\(", label: "用 get() 安全取值" },
-    { type: "codeMatches", pattern: "\\bdel\\b|\\.pop\\(", label: "删除了键" },
+    { type: "uses", calls: ["get"], label: "用 get() 安全取值" },
+    { type: "uses", nodes: ["Delete"], calls: ["pop"], label: "删除了键" },
   ],
   examples: [
     { code: 'user = {"name": "Tom", "age": 18}\nprint(user["name"])\nuser["age"] = 19\nprint(user)', description: "按键取值、修改" },

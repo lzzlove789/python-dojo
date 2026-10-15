@@ -32,8 +32,8 @@ def add(a, b):
     { type: "exprEquals", expr: "(calls.clear(), add(2, 3))[1]", equals: 5, label: "add(2, 3) 仍然返回 5" },
     { type: "exprEquals", expr: "(calls.clear(), add(1, 1), add(2, 2), list(calls))[3]", equals: ["add", "add"], label: "每次调用都被记录进 calls" },
     { type: "exprEquals", expr: "add.__name__", equals: "add", label: "用 @wraps 保留了原函数名 add" },
-    { type: "codeMatches", pattern: "^@logged[ \\t]*\\r?\\n[ \\t]*def add", label: "用 @logged 语法糖装饰了 add" },
-    { type: "codeMatches", pattern: "\\*args\\s*,\\s*\\*\\*kwargs", label: "wrapper 接收任意参数 (*args, **kwargs)" },
+    { type: "decoratedWith", func: "add", decorator: "logged", label: "用 @logged 语法糖装饰了 add" },
+    { type: "definesFunction", varargs: true, kwargs: true, label: "wrapper 接收任意参数 (*args, **kwargs)" },
   ],
   examples: [
     {

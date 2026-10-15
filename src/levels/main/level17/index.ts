@@ -22,8 +22,7 @@ def bmi(weight, height):
     { type: "exprEquals", expr: 'greet("Tom", "Hi")', equals: "Hi，Tom！", label: "greet(\"Tom\", \"Hi\") 可以覆盖默认值" },
     { type: "exprEquals", expr: 'greet(greeting="嗨", name="Amy")', equals: "嗨，Amy！", label: "支持关键字参数，顺序可以调换" },
     { type: "exprEquals", expr: "bmi(70, 1.75)", equals: 22.9, label: "bmi(70, 1.75) 返回 22.9" },
-    { type: "codeMatches", pattern: "greeting\\s*=\\s*[\"']你好[\"']", label: "greeting 的默认值是 \"你好\"" },
-    { type: "codeForbids", pattern: "print\\(", label: "函数用 return 返回结果，而不是 print" },
+    { type: "forbids", calls: ["print"], label: "函数用 return 返回结果，而不是 print" },
   ],
   examples: [
     { code: "def add(a, b=10):\n    return a + b\n\nprint(add(1))\nprint(add(1, 2))\nprint(add(b=5, a=1))", description: "默认参数与关键字参数" },

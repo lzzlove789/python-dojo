@@ -14,9 +14,9 @@ const level: LevelType = {
     { type: "noError", label: "代码运行没有报错" },
     { type: "exprEquals", expr: "cart", equals: ["牛奶", "苹果", "橙子"], label: "cart 最终是 [牛奶, 苹果, 橙子]" },
     { type: "exprEquals", expr: "count", equals: 3, label: "count 等于 3" },
-    { type: "codeMatches", pattern: "\\.append\\(", label: "用了 append" },
-    { type: "codeMatches", pattern: "\\.insert\\(", label: "用了 insert" },
-    { type: "codeMatches", pattern: "\\.remove\\(", label: "用了 remove" },
+    { type: "uses", calls: ["append"], label: "用了 append" },
+    { type: "uses", calls: ["insert"], label: "用了 insert" },
+    { type: "uses", calls: ["remove"], label: "用了 remove" },
   ],
   examples: [
     { code: "nums = [3, 1, 2]\nnums.append(4)\nnums.sort()\nprint(nums)", description: "append 添加、sort 原地排序" },

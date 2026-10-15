@@ -18,7 +18,7 @@ const level: LevelType = {
     { type: "exprEquals", expr: "on_sale", equals: true, label: "on_sale 是布尔值 True" },
     { type: "exprEquals", expr: "total", equals: 605.0, label: "total 等于 price * stock" },
     { type: "stdoutEquals", expected: "605.0", label: "用 print 输出了 total" },
-    { type: "codeMatches", pattern: "price\\s*\\*\\s*stock", label: "total 是用变量算出来的" },
+    { type: "usesNames", names: ["price", "stock"], label: "total 是用变量 price 和 stock 算出来的" },
   ],
   examples: [
     { code: 'name = "Tom"\nage = 18\nprint(name, age)', description: "变量就是给数据起名字" },

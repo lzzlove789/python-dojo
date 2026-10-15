@@ -1,4 +1,4 @@
-import type { CheckRule, RunResult } from "./types";
+import type { AstInfo, CheckRule, RunResult } from "./types";
 
 /** 没通过时给用户看的线索：期望值（可选）和实际得到的内容 */
 export interface CheckDetail {
@@ -72,10 +72,10 @@ function show(output: string): string {
 }
 
 /** run 为 null 表示还没运行过，全部判未通过且没有线索 */
-export function checkRules(code: string, run: RunResult | null, rules: CheckRule[]): CheckResult[] {
+export function checkRules(run: RunResult | null, rules: CheckRule[]): CheckResult[] {
   return rules.map((rule) => {
     if (run === null) return { rule, passed: false };
-    const { passed, detail } = evaluateRule(code, run, rule);
+    const { passed, detail } = evaluateRule(run, rule);
     return passed ? { rule, passed } : { rule, passed, detail };
   });
 }
@@ -84,11 +84,48 @@ export function allPassed(results: CheckResult[]): boolean {
   return results.length > 0 && results.every((r) => r.passed);
 }
 
-function evaluateRule(
-  code: string,
-  run: RunResult,
-  rule: CheckRule
-): { passed: boolean; detail?: CheckDetail } {
+// ---- 基于 AST 的结构检查 ----
+// 语法有错（ok: false）或没有 AST 信息时，这类规则一律判未通过（noError 规则会同时提示语法错误）
+
+function usesAny(ast: AstInfo, r: { nodes?: string[]; calls?: string[]; imports?: string[] }): boolean {
+  const nodes = ast.nodes ?? {};
+  return (
+    (r.nodes ?? []).some((n) => (nodes[n] ?? 0) > 0) ||
+    (r.calls ?? []).some((c) => (ast.calls ?? []).includes(c)) ||
+    (r.imports ?? []).some((m) => (ast.imports ?? []).includes(m))
+  );
+}
+
+function evaluateAstRule(ast: AstInfo | undefined, rule: CheckRule): boolean {
+  if (!ast || !ast.ok) return false;
+  switch (rule.type) {
+    case "uses":
+      return usesAny(ast, rule);
+    case "forbids":
+      return !usesAny(ast, rule);
+    case "usesNames":
+      return rule.names.every((n) => (ast.names ?? []).includes(n));
+    case "hasKeyword":
+      return (ast.keywords ?? []).some(
+        (k) =>
+          k.arg === rule.keyword &&
+          (rule.call === undefined || k.call === rule.call) &&
+          (!("equals" in rule) || (k.const && deepEqual(k.value, rule.equals)))
+      );
+    case "usesStar":
+      return (ast.stars ?? []).some((s) => s.callee === rule.callee && s.kind === rule.kind);
+    case "decoratedWith":
+      return (ast.decorated ?? []).some((d) => d.func === rule.func && d.decorator === rule.decorator);
+    case "definesFunction":
+      return (ast.functions ?? []).some(
+        (f) => (!rule.varargs || f.vararg) && (!rule.kwargs || f.kwarg)
+      );
+    default:
+      return false;
+  }
+}
+
+function evaluateRule(run: RunResult, rule: CheckRule): { passed: boolean; detail?: CheckDetail } {
   switch (rule.type) {
     case "noError": {
       const passed = run.error === null && !run.timedOut;
@@ -107,12 +144,6 @@ function evaluateRule(
       const actual = run.stdout.trim() === "" ? "（没有输出）" : clip(closestLine(run.stdout, rule.example));
       return { passed, detail: { expected: rule.example, actual } };
     }
-    case "codeMatches":
-      return { passed: safeRegex(rule.pattern, "m")?.test(code) ?? false };
-    case "codeForbids": {
-      const re = safeRegex(rule.pattern, "m");
-      return { passed: re !== null && !re.test(code) };
-    }
     case "exprEquals": {
       const p = run.probes.find((x) => x.expr === rule.expr);
       const passed = !!p && p.ok && deepEqual(p.value, rule.equals);
@@ -122,5 +153,7 @@ function evaluateRule(
       if (!p.ok) return { passed, detail: { actual: clip(p.error ?? "求值失败") } };
       return { passed, detail: { actual: "实际得到 " + clip(JSON.stringify(p.value)) } };
     }
+    default:
+      return { passed: evaluateAstRule(run.ast, rule) };
   }
 }

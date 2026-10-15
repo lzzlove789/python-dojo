@@ -16,7 +16,7 @@ const level: LevelType = {
     { type: "exprEquals", expr: "shout", equals: "HELLO, PYTHON", label: "shout 是 clean 的大写形式" },
     { type: "exprEquals", expr: "n", equals: 13, label: "n 是 clean 的字符数 13" },
     { type: "stdoutEquals", expected: "HELLO, PYTHON 共 13 个字符", label: "输出了 HELLO, PYTHON 共 13 个字符" },
-    { type: "codeMatches", pattern: "f[\"']", label: "用了 f-string 来格式化" },
+    { type: "uses", nodes: ["JoinedStr"], label: "用了 f-string 来格式化" },
   ],
   examples: [
     { code: 'print("  hi  ".strip())\nprint("abc".upper())\nprint(len("你好"))', description: "strip / upper / len" },

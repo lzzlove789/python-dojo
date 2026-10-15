@@ -26,8 +26,8 @@ const level: LevelType = {
       label: "by_name 按姓名排序",
     },
     { type: "exprEquals", expr: "students[0][0]", equals: "Tom", label: "原列表 students 没有被改动" },
-    { type: "codeMatches", pattern: "key\\s*=", label: "用了 key 参数" },
-    { type: "codeMatches", pattern: "reverse\\s*=\\s*True", label: "用 reverse=True 做降序" },
+    { type: "hasKeyword", keyword: "key", label: "用了 key 参数" },
+    { type: "hasKeyword", keyword: "reverse", equals: true, label: "用 reverse=True 做降序" },
   ],
   examples: [
     { code: "print(sorted([3, 1, 2]))\nprint(sorted([3, 1, 2], reverse=True))", description: "sorted 返回新列表，原列表不变" },

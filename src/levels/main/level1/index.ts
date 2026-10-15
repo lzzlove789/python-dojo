@@ -13,7 +13,7 @@ const level: LevelType = {
     { type: "noError", label: "代码运行没有报错" },
     { type: "stdoutMatches", pattern: "^Hello, Python!$", label: "输出了一行 Hello, Python!", example: "Hello, Python!" },
     { type: "stdoutMatches", pattern: "^7$", label: "输出了 1 + 2 * 3 的计算结果", example: "7" },
-    { type: "codeForbids", pattern: "print\\(\\s*[\"']7[\"']\\s*\\)|print\\(\\s*7\\s*\\)", label: "7 是算出来的，不是直接写死的" },
+    { type: "uses", nodes: ["BinOp"], label: "7 是算出来的，不是直接写死的" },
   ],
   examples: [
     { code: 'print("你好，世界")', description: "打印文字（字符串要放在引号里）" },

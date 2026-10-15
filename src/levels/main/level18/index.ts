@@ -30,8 +30,8 @@ text = describe(**opts)
     { type: "exprEquals", expr: 'describe(name="Tom", age=18)', equals: "age=18, name=Tom", label: "describe 返回按键名排序的描述" },
     { type: "exprEquals", expr: "result", equals: 6, label: "result 等于 6" },
     { type: "exprEquals", expr: "text", equals: "a=1, b=2", label: "text 等于 \"a=1, b=2\"" },
-    { type: "codeMatches", pattern: "total\\(\\s*\\*args\\s*\\)", label: "用 *args 拆开列表传参" },
-    { type: "codeMatches", pattern: "describe\\(\\s*\\*\\*opts\\s*\\)", label: "用 **opts 拆开字典传参" },
+    { type: "usesStar", callee: "total", kind: "*", label: "用 *args 拆开列表传参" },
+    { type: "usesStar", callee: "describe", kind: "**", label: "用 **opts 拆开字典传参" },
   ],
   examples: [
     { code: "def show(*args, **kwargs):\n    print(args)\n    print(kwargs)\n\nshow(1, 2, a=3)", description: "args 是元组，kwargs 是字典" },

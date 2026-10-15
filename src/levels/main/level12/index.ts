@@ -16,8 +16,8 @@ const level: LevelType = {
     { type: "exprEquals", expr: "sorted(unique)", equals: ["a@x.com", "b@x.com", "c@x.com"], label: "unique 是 3 个不重复的邮箱" },
     { type: "exprEquals", expr: "sorted(common)", equals: [3, 4], label: "common 是交集 {3, 4}" },
     { type: "exprEquals", expr: "[x, y]", equals: [3, 4], label: "x、y 分别是 3 和 4" },
-    { type: "codeMatches", pattern: "set\\(", label: "用 set() 去重" },
-    { type: "codeMatches", pattern: "&|\\.intersection\\(", label: "用交集运算找共同用户" },
+    { type: "uses", calls: ["set"], label: "用 set() 去重" },
+    { type: "uses", nodes: ["BitAnd"], calls: ["intersection"], label: "用交集运算找共同用户" },
   ],
   examples: [
     { code: "s = {1, 2, 2, 3}\nprint(s)\ns.add(9)\nprint(3 in s, len(s))", description: "集合自动去重，in 判断极快" },

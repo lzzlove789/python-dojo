@@ -40,8 +40,8 @@ def mask_phone(phone):
       label: "不合法的返回 False（包括多余内容）",
     },
     { type: "exprEquals", expr: 'mask_phone("13812345678")', equals: "138****5678", label: 'mask_phone 得到 "138****5678"' },
-    { type: "codeMatches", pattern: "re\\.(findall|finditer)\\(", label: "用 re.findall 提取" },
-    { type: "codeMatches", pattern: "re\\.sub\\(", label: "用 re.sub 替换" },
+    { type: "uses", calls: ["findall", "finditer"], label: "用 re.findall 提取" },
+    { type: "uses", calls: ["sub"], label: "用 re.sub 替换" },
   ],
   examples: [
     { code: 'import re\nprint(re.findall(r"\\d+", "a1b22c333"))\nprint(re.search(r"(\\w+)@(\\w+)", "tom@mail").groups())', description: "findall 找全部；search 找第一个并用 groups() 取分组" },

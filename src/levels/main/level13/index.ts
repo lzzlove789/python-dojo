@@ -15,10 +15,8 @@ const level: LevelType = {
     { type: "exprEquals", expr: "squares", equals: [1, 4, 9, 16, 25, 36, 49, 64, 81, 100], label: "squares 是 1 到 10 的平方" },
     { type: "exprEquals", expr: "even_sq", equals: [4, 16, 36, 64, 100], label: "even_sq 是偶数的平方" },
     { type: "exprEquals", expr: "lengths", equals: [5, 4, 6], label: "lengths 是 [5, 4, 6]" },
-    // 注意：用户代码会被这条正则扫描。曾经的写法 \[[^\]]*for[^\]]*in[^\]]*\] 是三段相邻的可变长度匹配，
-    // 对恶意/畸形输入是立方级回溯（4.5KB 就能卡 20 秒），所以改成限定长度、排除括号和换行的线性写法
-    { type: "codeMatches", pattern: "\\[[^\\]\\[\\n]{0,200}\\bfor\\b[^\\]\\[\\n]{0,200}\\bin\\b", label: "用了列表推导式" },
-    { type: "codeForbids", pattern: "^[ \\t]*for\\b", label: "不使用独立的 for 循环语句" },
+    { type: "uses", nodes: ["ListComp"], label: "用了列表推导式" },
+    { type: "forbids", nodes: ["For"], label: "不使用独立的 for 循环语句" },
   ],
   examples: [
     { code: "print([i * 2 for i in range(5)])", description: "最简单的推导式" },

@@ -14,8 +14,9 @@ const level: LevelType = {
     { type: "noError", label: "代码运行没有报错" },
     { type: "exprEquals", expr: "total", equals: 5050, label: "total 等于 1 到 100 的和 5050" },
     { type: "exprEquals", expr: "even_sum", equals: 2550, label: "even_sum 等于 100 以内偶数的和 2550" },
-    { type: "codeMatches", pattern: "for\\s+\\w+\\s+in\\s+range\\(", label: "用了 for ... in range(...)" },
-    { type: "codeForbids", pattern: "\\bsum\\(", label: "不能直接用内置 sum()，请自己循环累加" },
+    { type: "uses", nodes: ["For"], label: "用了 for 循环" },
+    { type: "uses", calls: ["range"], label: "用 range() 生成 1 到 100" },
+    { type: "forbids", calls: ["sum"], label: "不能直接用内置 sum()，请自己循环累加" },
   ],
   examples: [
     { code: "for i in range(3):\n    print(i)", description: "range(3) 产生 0、1、2" },

@@ -15,9 +15,9 @@ const level: LevelType = {
     { type: "exprEquals", expr: "minutes", equals: 16, label: "minutes 等于 16" },
     { type: "exprEquals", expr: "seconds", equals: 40, label: "seconds 等于 40" },
     { type: "exprEquals", expr: "kb", equals: 1024, label: "kb 等于 1024" },
-    { type: "codeMatches", pattern: "//", label: "用 // 做了整除" },
-    { type: "codeMatches", pattern: "%", label: "用 % 取了余数" },
-    { type: "codeMatches", pattern: "\\*\\*", label: "用 ** 做了幂运算" },
+    { type: "uses", nodes: ["FloorDiv"], label: "用 // 做了整除" },
+    { type: "uses", nodes: ["Mod"], label: "用 % 取了余数" },
+    { type: "uses", nodes: ["Pow"], label: "用 ** 做了幂运算" },
   ],
   examples: [
     { code: "print(7 / 2)\nprint(7 // 2)\nprint(7 % 2)", description: "除法 / 得小数，// 取商，% 取余" },

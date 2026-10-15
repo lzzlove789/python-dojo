@@ -42,7 +42,7 @@ def check_age(age):
       equals: null,
       label: "check_age(-1) 抛出 ValueError，且消息含“年龄”",
     },
-    { type: "codeForbids", pattern: "except\\s*:", label: "不写裸 except，要指定异常类型" },
+    { type: "forbids", nodes: ["BareExcept"], label: "不写裸 except，要指定异常类型" },
   ],
   examples: [
     { code: "try:\n    print(1 / 0)\nexcept ZeroDivisionError as e:\n    print('出错了：', e)\nfinally:\n    print('无论如何都会执行')", description: "try / except / finally" },

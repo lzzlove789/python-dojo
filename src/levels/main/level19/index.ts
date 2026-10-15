@@ -37,8 +37,8 @@ def make_multiplier(n):
     },
     { type: "exprEquals", expr: "make_multiplier(3)(5)", equals: 15, label: "make_multiplier(3)(5) 返回 15" },
     { type: "exprEquals", expr: "[make_multiplier(k)(10) for k in (2, 3)]", equals: [20, 30], label: "不同的 n 互不影响" },
-    { type: "codeMatches", pattern: "\\bnonlocal\\b", label: "用 nonlocal 修改外层变量" },
-    { type: "codeForbids", pattern: "\\bglobal\\b", label: "不使用 global" },
+    { type: "uses", nodes: ["Nonlocal"], label: "用 nonlocal 修改外层变量" },
+    { type: "forbids", nodes: ["Global"], label: "不使用 global" },
   ],
   examples: [
     { code: "x = 10\n\ndef f():\n    x = 99      # 这是局部变量\n    return x\n\nprint(f(), x)", description: "函数内赋值会创建局部变量，不影响外面" },

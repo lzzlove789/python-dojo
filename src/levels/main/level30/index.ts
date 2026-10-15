@@ -111,7 +111,7 @@ def save_report(report, path):
       equals: "Amy",
       label: "报告成功写入 JSON 文件，读回来内容一致",
     },
-    { type: "codeMatches", pattern: "try\\s*:", label: "用 try/except 处理脏数据" },
+    { type: "uses", nodes: ["Try"], label: "用 try/except 处理脏数据" },
   ],
   examples: [
     { code: 'import csv, io\ntext = "a,b\\n1,2\\n3,4\\n"\nfor row in csv.DictReader(io.StringIO(text)):\n    print(row["a"], row["b"])', description: "csv.DictReader：把每行变成以表头为键的字典" },

@@ -17,7 +17,7 @@ const level: LevelType = {
     { type: "exprEquals", expr: "grade(85)", equals: "B", label: "grade(85) 返回 \"B\"" },
     { type: "exprEquals", expr: "grade(60)", equals: "C", label: "边界：grade(60) 返回 \"C\"" },
     { type: "exprEquals", expr: "grade(59)", equals: "D", label: "grade(59) 返回 \"D\"" },
-    { type: "codeMatches", pattern: "\\belif\\b", label: "用了 elif 做多分支判断" },
+    { type: "uses", nodes: ["Elif"], label: "用了 elif 做多分支判断" },
   ],
   examples: [
     { code: 'age = 20\nif age >= 18:\n    print("成年")\nelse:\n    print("未成年")', description: "if / else：缩进（4 个空格）表示属于哪个分支" },

@@ -6,7 +6,7 @@ import { checkRules, collectProbes } from "../core/checker";
 async function runLevel(code: string, level: (typeof mainLevels)[number]) {
   const runner = await getTestRunner();
   const run = await runner.run({ code, stdin: level.stdin, probes: collectProbes(level.checks) });
-  return checkRules(code, run, level.checks);
+  return checkRules(run, level.checks);
 }
 
 describe("关卡数据", () => {
@@ -38,47 +38,79 @@ describe("关卡数据", () => {
   }
 });
 
-// 用户提交的代码会被各关的 codeMatches / codeForbids 正则扫描，而 JS 正则是回溯引擎，
-// 写得不好的模式遇到畸形输入会卡死整个标签页（曾经第 13 关就有立方级回溯）。
-// 这里用一批对回溯最不友好的输入做回归：先用小输入探测，确认没有指数/立方级再放大到上限长度。
-describe("关卡正则的性能（防 ReDoS）", () => {
-  const rules = mainLevels.flatMap((l) =>
-    l.checks.flatMap((c) =>
-      c.type === "codeMatches" || c.type === "codeForbids" ? [{ level: l.key, label: c.label, pattern: c.pattern }] : []
-    )
-  );
-
-  const adversarial: Array<[string, (n: number) => string]> = [
-    ["重复的 [ for in", (n) => "[ for in ".repeat(n / 9)],
-    ["重复的 [for", (n) => "[for ".repeat(n / 5)],
-    ["一个 [ 加长串 for in", (n) => "[" + " for in".repeat(n / 7)],
-    ["超长空白", (n) => " ".repeat(n)],
-    ["超长换行", (n) => "\n".repeat(n)],
-    ["@logged 后跟大量空白", (n) => "@logged" + " \n".repeat(n / 2)],
-    ["关键字后跟大量空白", (n) => "except" + " ".repeat(n) + "price" + " ".repeat(n) + "key" + " ".repeat(n)],
-    ["重复的 print(", (n) => "print(".repeat(n / 6)],
-    ["重复的 for for", (n) => "for for ".repeat(n / 8)],
-    ["重复的 import from", (n) => "from import ".repeat(n / 12)],
+// 代码结构检查（uses / forbids …）是基于 AST 的，规则里写的节点名拼错了就会永远判不过（或永远判过）。
+// 这里用真实的 `ast` 模块核对：每个节点名必须真的存在（Elif、BareExcept 是我们自己派生的两项）。
+describe("AST 规则的写法", () => {
+  const DERIVED = ["Elif", "BareExcept"];
+  const nodeNames = [
+    ...new Set(
+      mainLevels.flatMap((l) =>
+        l.checks.flatMap((c) => (c.type === "uses" || c.type === "forbids" ? (c.nodes ?? []) : []))
+      )
+    ),
   ];
 
+  it("uses / forbids 至少列出一项（节点、调用或导入）", () => {
+    for (const l of mainLevels) {
+      for (const c of l.checks) {
+        if (c.type === "uses" || c.type === "forbids") {
+          const total = (c.nodes?.length ?? 0) + (c.calls?.length ?? 0) + (c.imports?.length ?? 0);
+          expect(total, `${l.key}「${c.label}」`).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+
+  it("规则里的语法节点名都是真实存在的 ast 节点", async () => {
+    expect(nodeNames.length).toBeGreaterThan(10);
+    const runner = await getTestRunner();
+    const r = await runner.run({
+      code: "import ast",
+      probes: [`[n for n in ${JSON.stringify(nodeNames)} if not hasattr(ast, n) and n not in ${JSON.stringify(DERIVED)}]`],
+    });
+    expect(r.probes[0]).toMatchObject({ ok: true, value: [] });
+  });
+
+  it("每关至少有一条检查是行为测试（exprEquals 或输出），不会只靠语法结构过关", () => {
+    for (const l of mainLevels) {
+      const behavioural = l.checks.some(
+        (c) => c.type === "exprEquals" || c.type === "stdoutEquals" || c.type === "stdoutMatches"
+      );
+      expect(behavioural, l.key).toBe(true);
+    }
+  });
+});
+
+// stdoutMatches 是对**程序输出**（上限 100KB）做的正则，写得不好同样会被畸形输出卡死。
+describe("输出正则的性能（防 ReDoS）", () => {
+  const rules = mainLevels.flatMap((l) =>
+    l.checks.flatMap((c) => (c.type === "stdoutMatches" ? [{ level: l.key, label: c.label, pattern: c.pattern }] : []))
+  );
+  const adversarial: Array<[string, (n: number) => string]> = [
+    ["超长空白", (n) => " ".repeat(n)],
+    ["超长换行", (n) => "\n".repeat(n)],
+    ["重复的数字", (n) => "7".repeat(n)],
+    ["重复的汉字", (n) => "小明明年".repeat(n / 4)],
+    ["重复的 Hello,", (n) => "Hello, Python".repeat(n / 13)],
+  ];
   const time = (re: RegExp, s: string) => {
     const t0 = performance.now();
     re.test(s);
     return performance.now() - t0;
   };
 
-  it("至少收集到了一批代码检查正则", () => {
-    expect(rules.length).toBeGreaterThan(30);
+  it("至少收集到了输出正则", () => {
+    expect(rules.length).toBeGreaterThan(0);
   });
 
   for (const { level, label, pattern } of rules) {
-    it(`${level}「${label}」对畸形输入不会卡死`, () => {
+    it(`${level}「${label}」对畸形输出不会卡死`, () => {
       const re = new RegExp(pattern, "m");
       for (const [name, make] of adversarial) {
         expect(time(re, make(3000)), `${name} @3KB`).toBeLessThan(100);
       }
       for (const [name, make] of adversarial) {
-        expect(time(re, make(50_000)), `${name} @50KB`).toBeLessThan(500);
+        expect(time(re, make(100_000)), `${name} @100KB`).toBeLessThan(500);
       }
     });
   }

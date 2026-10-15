@@ -118,7 +118,7 @@ async function onRun() {
     // 运行期间切关了就丢弃结果
     if (lv.key !== currentLevel.value.key) return;
     result.value = r;
-    const results = checkRules(submitted, r, lv.checks);
+    const results = checkRules(r, lv.checks);
     checkResults.value = results;
     if (allPassed(results)) {
       if (!alreadyPassed) {

@@ -95,8 +95,12 @@ src/
 | `noError` | 代码运行没有抛异常、没有超时 |
 | `stdoutEquals` | 输出（去掉首尾空白）等于给定文本 |
 | `stdoutMatches` | 输出匹配正则；可带 `example` 用于没通过时显示期望值 |
-| `codeMatches` / `codeForbids` | 源码必须 / 不能匹配某个正则（如强制用 `for`、禁止 `sum()`） |
 | `exprEquals` | 代码运行后，在其命名空间里求值一个 Python 表达式并与期望值比较——既能测变量，也能调用用户写的函数，如 `grade(95)` |
+| `uses` / `forbids` | **代码结构检查**：用了 / 不能用某些语法节点（`For`、`While`、`ListComp`、`FloorDiv`、`Yield`……）、函数或方法调用（`sum`、`append`、`enumerate`……）、导入的模块 |
+| `usesNames` / `hasKeyword` / `usesStar` / `decoratedWith` / `definesFunction` | 更细的结构检查：读取了哪些变量、是否带了某个关键字参数（如 `reverse=True`）、`f(*xs)` / `f(**kw)` 展开、装饰器、`*args/**kwargs` 函数 |
+
+结构检查基于 Python 自己的 `ast` 模块分析用户源码，**不是对源码文本做正则**：写在注释和字符串里的 `for`、`sum(` 不会被误判，
+用户的代码也不会被正则回溯卡死。语法有错的代码，所有结构规则一律判未通过。
 
 ## 安全
 
