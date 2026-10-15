@@ -2,6 +2,7 @@ import { defineConfig, type Plugin } from "vite";
 import vue from "@vitejs/plugin-vue";
 import { createReadStream, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { CSP } from "./src/security/csp";
 
 // Pyodide 运行时只需要这四个文件；pyodide.mjs（JS 入口）由 Vite 从 npm 包直接打包。
 // 自托管而不是走 CDN：避免 CDN 被投毒影响所有访客，也让 CSP 可以收紧到只允许同源。
@@ -38,22 +39,8 @@ function selfHostPyodide(base: string): Plugin {
   };
 }
 
-// GitHub Pages 无法设置响应头，只能用 <meta> 声明 CSP。
-// 关键是 connect-src 'self'：用户的 Python 代码（js.fetch 等）无法向外网发请求。
+// CSP 的内容在 src/security/csp.ts（带单测）。GitHub Pages 发不了响应头，只能在 build 时往 index.html 注入 <meta>。
 // 只在 build 时注入：dev 服务器自带内联脚本（HMR），会和严格 CSP 冲突。
-export const CSP = [
-  "default-src 'self'",
-  "script-src 'self' 'wasm-unsafe-eval'",
-  "worker-src 'self' blob:",
-  "connect-src 'self'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src https://fonts.gstatic.com",
-  "img-src 'self' data:",
-  "object-src 'none'",
-  "base-uri 'none'",
-  "form-action 'none'",
-].join("; ");
-
 function injectCsp(): Plugin {
   return {
     name: "inject-csp",
