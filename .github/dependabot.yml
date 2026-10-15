@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # pyodide 的运行时文件随 npm 包一起自托管，升级它需要同时回归测试 30 关，单独关注
+    labels: [dependencies]
+
+  # 固定了 SHA 的 GitHub Actions 靠这个自动提升级 PR
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies]
