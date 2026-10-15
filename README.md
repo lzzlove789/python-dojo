@@ -1,7 +1,6 @@
 # Python 练功房
 
-- 🎮 **在线体验**：<https://lzzlove789.github.io/python-dojo/>
-- 📦 **源码仓库**：<https://github.com/lzzlove789/python-dojo>
+🎮 **在线体验**：<https://lzzlove789.github.io/python-dojo/>
 
 一个在浏览器里**闯关学 Python** 的小游戏：30 个关卡、4 个章节，每关有场景故事、教程、可一键载入的示例、提示、参考答案和实时的通关检查清单。
 
